@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>AgroYield · Coleta + Estimativa de Produção</title>
+
+<!-- PWA META TAGS -->
+<meta name="application-name" content="AgroYield">
+<meta name="description" content="Coleta de campo com 7 amostras e estimativa de produção de grãos">
+<meta name="theme-color" content="#0a0f07">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AgroYield">
+<meta name="msapplication-TileColor" content="#0a0f07">
+<meta name="msapplication-tap-highlight" content="no">
+
+<!-- Ícones Apple Touch (gerados inline via SVG → base64) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjM4IiBmaWxsPSIjMGEwZjA3Ii8+PHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSIzOCIgZmlsbD0iIzRhOWExMCIgb3BhY2l0eT0iMC4zIi8+PHRleHQgeD0iOTYiIHk9Ijg0IiBmb250LXNpemU9IjY0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7imqY8L3RleHQ+PHRleHQgeD0iNjAiIHk9IjE1NiIgZm9udC1zaXplPSI1NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+MvjwvdGV4dD48dGV4dCB4PSIxMzIiIHk9IjE1NiIgZm9udC1zaXplPSI1NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+MuzwvdGV4dD48L3N2Zz4=">
+
+<!-- Fontes do sistema — sem dependências externas, 100% offline -->
+
+<style>
+  /* ── FONTES OFFLINE-FIRST ──
+     Syne → fallback para fontes geométricas do sistema (sem serifa arredondada)
+     JetBrains Mono → fallback para mono do sistema
+     Times New Roman → já é fonte do sistema, funciona offline nativamente       */
+  @font-face {
+    font-family: var(--font-ui);
+    src: local('Syne'), local('Syne-Regular');
+    font-weight: 400;
+  }
+  @font-face {
+    font-family: var(--font-ui);
+    src: local('Syne Bold'), local('Syne-Bold');
+    font-weight: 700 800;
+  }
+  /* Stack completo: Syne (se instalada) → Nunito (Android) → Futura (iOS) → sans-serif */
+  :root {
+    --font-ui: 'Syne', 'Nunito', 'Futura', ui-rounded, system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Roboto Mono', 'SF Mono', ui-monospace, monospace;
+  }
+  :root {
+    --bg: #0a0f07;
+    --surface: #111a0c;
+    --card: #162010;
+    --border: #2a3d1e;
+    --accent: #7ecf3a;
+    --accent2: #b5e870;
+    --accent3: #4a9a10;
+    --gold: #d4a742;
+    --text: #e8f5d8;
+    --muted: #7a9460;
+    --danger: #e05050;
+    --warn: #e0a030;
+    --safe-top: env(safe-area-inset-top);
+    --safe-bot: env(safe-area-inset-bottom);
+
+    /* Resultado — fundo mais claro, números brancos bem visíveis */
+    --res-bg: #1e3012;
+    --res-border: #3d6020;
+    --res-num: #ffffff;
+    --res-num-gold: #f5c842;
+    --res-num-green: #a8f04a;
+    --res-label: #8aac68;
+    --font-num: 'Times New Roman', Times, serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bot);
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 16px 80px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 20px 0 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .logo-area { display: flex; align-items: center; gap: 12px; }
+
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: var(--accent3);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 0 20px rgba(126,207,58,0.3);
+    flex-shrink: 0;
+  }
+
+  .header-text h1 {
+    font-family: var(--font-ui);
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--accent2);
+    letter-spacing: -0.5px;
+  }
+
+  .header-text p {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* Botão instalar */
+  #btnInstalar {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--accent3);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 0 14px rgba(74,154,16,0.4);
+    animation: pulseBtn 2s infinite;
+  }
+
+  @keyframes pulseBtn {
+    0%,100% { box-shadow: 0 0 14px rgba(74,154,16,0.4); }
+    50% { box-shadow: 0 0 24px rgba(74,154,16,0.7); }
+  }
+
+  /* Status offline */
+  #offlineBanner {
+    display: none;
+    background: rgba(224,80,80,0.12);
+    border: 1px solid var(--danger);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 11px;
+    color: var(--danger);
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  /* ── CULTURA TABS ── */
+  .cultura-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .cultura-btn {
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    border-radius: 6px;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    touch-action: manipulation;
+  }
+
+  .cultura-btn:active { transform: scale(0.96); }
+
+  .cultura-btn.active {
+    background: var(--accent3);
+    border-color: var(--accent3);
+    color: #fff;
+    box-shadow: 0 0 14px rgba(74,154,16,0.4);
+  }
+
+  /* ── MAIN TABS ── */
+  .main-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .main-tabs::-webkit-scrollbar { display: none; }
+
+  .main-tab {
+    padding: 10px 18px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+    white-space: nowrap;
+    touch-action: manipulation;
+  }
+
+  .main-tab:active { opacity: 0.7; }
+  .main-tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── GRID ── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  @media (max-width: 620px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+
+  .card-header {
+    padding: 12px 18px;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+  }
+
+  .card-body { padding: 18px; }
+
+  .card-inline {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+
+  .card-title {
+    font-family: var(--font-ui);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 7px;
+  }
+
+  /* ── AMOSTRAS ── */
+  .amostra-sel {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+
+  .amostra-btn {
+    padding: 8px 13px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    transition: all 0.15s;
+    position: relative;
+    touch-action: manipulation;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .amostra-btn.active {
+    background: var(--accent3);
+    color: white;
+    border-color: var(--accent2);
+    box-shadow: 0 0 10px rgba(74,154,16,0.3);
+  }
+
+  .amostra-btn.preenchido::after {
+    content: '●';
+    position: absolute;
+    top: -4px; right: -4px;
+    font-size: 8px;
+    color: var(--accent2);
+  }
+
+  .vagem-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 9px;
+    margin: 12px 0;
+  }
+
+  .vagem-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 10px 8px;
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .vagem-label {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .vagem-card input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--accent2);
+    font-size: 26px;
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-family: var(--font-ui);
+    outline: none;
+  }
+
+  .vagem-card input:focus { border-color: var(--accent3); }
+
+  .resultado-amostra {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 12px;
+    border-radius: 10px;
+    margin: 12px 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .res-am-item { text-align: center; }
+  .res-am-label { font-size: 8px; color: var(--res-label); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; font-family: var(--font-ui); }
+  .res-am-val { font-size: 26px; font-weight: 700; color: #ffffff; font-family: var(--font-num); letter-spacing: -0.5px; }
+
+  /* Tabela resumo */
+  .amostras-resumo { width: 100%; border-collapse: collapse; font-size: 11px; }
+
+  .amostras-resumo th {
+    text-align: center;
+    padding: 7px 8px;
+    background: rgba(0,0,0,0.3);
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: var(--font-ui);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .amostras-resumo td {
+    text-align: center;
+    padding: 7px 8px;
+    border-bottom: 1px solid rgba(42,61,30,0.4);
+  }
+
+  .amostras-resumo tr:last-child td { border-bottom: none; }
+  .amostras-resumo tr.ativa td { color: var(--accent2); background: rgba(74,154,16,0.05); }
+  .amostras-resumo td.vazia { color: var(--muted); font-size: 10px; }
+
+  /* ── CAMPOS ── */
+  .field { margin-bottom: 12px; }
+
+  .field label {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 5px;
+    letter-spacing: 0.4px;
+  }
+
+  .field input, .field select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 11px 12px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 16px; /* evita zoom no iOS */
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .field input:focus, .field select:focus {
+    border-color: var(--accent3);
+    box-shadow: 0 0 0 3px rgba(74,154,16,0.15);
+  }
+
+  .field .unit { font-size: 10px; color: var(--muted); margin-top: 3px; text-align: right; }
+
+  .range-group { display: flex; align-items: center; gap: 10px; }
+
+  .range-group input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .range-group input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px; height: 20px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(126,207,58,0.5);
+  }
+
+  .range-val { width: 44px; text-align: right; font-size: 13px; color: var(--accent2); flex-shrink: 0; }
+
+  /* Fatores */
+  .fator-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
+  .fator-row:last-child { border-bottom: none; }
+  .fator-label { color: var(--muted); }
+  .fator-val { font-weight: 500; color: var(--accent2); }
+  .fator-val.neg { color: var(--danger); }
+  .fator-val.warn { color: var(--warn); }
+  .fator-val.pos { color: var(--accent); }
+
+  /* ── BOTÕES ── */
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent3);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-weight: 700;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 3px 15px rgba(74,154,16,0.3);
+    touch-action: manipulation;
+    min-height: 50px;
+  }
+
+  .btn-primary:active { transform: scale(0.98); background: var(--accent); }
+
+  .btn-calc {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent3);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-family: var(--font-ui);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+    box-shadow: 0 4px 20px rgba(74,154,16,0.3);
+    touch-action: manipulation;
+    min-height: 56px;
+  }
+
+  .btn-calc:active { transform: scale(0.98); background: var(--accent); }
+
+  /* ── RESULTADO ── */
+  .result-card {
+    background: linear-gradient(135deg, var(--res-bg) 0%, #172a0d 100%);
+    border: 1px solid var(--res-border);
+    border-radius: 16px;
+    padding: 22px 20px;
+    margin-top: 14px;
+    box-shadow: 0 0 40px rgba(74,154,16,0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-card::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(168,240,74,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .result-header {
+    font-family: var(--font-ui);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+
+  .result-main {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  @media (max-width: 400px) { .result-main { grid-template-columns: 1fr 1fr; } }
+
+  .result-item .r-label {
+    font-size: 9px;
+    color: var(--res-label);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    font-family: var(--font-ui);
+  }
+  .result-item .r-val {
+    font-family: var(--font-num);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--res-num);
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  .result-item .r-unit {
+    font-size: 10px;
+    color: var(--res-label);
+    margin-top: 3px;
+    font-family: var(--font-ui);
+  }
+  .result-item.highlight .r-val {
+    color: var(--res-num-gold);
+    font-size: 34px;
+  }
+
+  .prod-bar-wrap { margin-top: 14px; }
+  .prod-bar-label { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); margin-bottom: 4px; }
+  .prod-bar-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .prod-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent3), var(--accent)); transition: width 0.6s cubic-bezier(0.4,0,0.2,1); box-shadow: 0 0 8px rgba(126,207,58,0.4); }
+
+  .perdas-list { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 12px; }
+  .perda-tag { padding: 3px 9px; border-radius: 20px; font-size: 10px; border: 1px solid; }
+  .perda-tag.low { background: rgba(126,207,58,0.08); border-color: var(--accent3); color: var(--accent2); }
+  .perda-tag.mid { background: rgba(224,160,48,0.08); border-color: var(--warn); color: var(--warn); }
+  .perda-tag.high { background: rgba(224,80,80,0.08); border-color: var(--danger); color: var(--danger); }
+
+  /* Cenários */
+  .cenarios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 14px; }
+  @media (max-width: 400px) { .cenarios { grid-template-columns: 1fr; } }
+
+  .cenario-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .cenario-card .c-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px; font-family: var(--font-ui); }
+  .cenario-card.pessimista .c-label { color: var(--danger); }
+  .cenario-card.realista .c-label { color: var(--warn); }
+  .cenario-card.otimista .c-label { color: var(--accent); }
+  .cenario-card .c-val { font-family: var(--font-num); font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px; }
+  .cenario-card .c-unit { font-size: 9px; color: var(--muted); }
+  .cenario-card.realista { border-color: var(--warn); box-shadow: 0 0 10px rgba(224,160,48,0.1); }
+
+  /* Badge coleta */
+  .coleta-badge {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: rgba(74,154,16,0.15);
+    border: 1px solid var(--accent3);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--accent2);
+    margin-bottom: 14px;
+    font-family: var(--font-ui);
+    font-weight: 600;
+  }
+
+  .coleta-badge.show { display: inline-flex; }
+
+  .coleta-badge .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.5s infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* Histórico */
+  .historico-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .historico h3 { font-family: var(--font-ui); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .btn-clear { font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; font-family: var(--font-mono); padding: 6px 8px; border-radius: 4px; touch-action: manipulation; }
+  .btn-clear:active { color: var(--danger); }
+  .historico-list { display: flex; flex-direction: column; gap: 8px; }
+  .hist-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .hist-left .h-cultura { color: var(--accent2); font-weight: 500; }
+  .hist-left .h-params { color: var(--muted); font-size: 10px; margin-top: 2px; }
+  .hist-right { text-align: right; flex-shrink: 0; margin-left: 12px; }
+  .hist-right .h-prod { font-family: var(--font-ui); font-weight: 700; font-size: 15px; color: var(--gold); }
+  .hist-right .h-unit { font-size: 9px; color: var(--muted); }
+  .empty-state { text-align: center; padding: 24px; color: var(--muted); font-size: 12px; border: 1px dashed var(--border); border-radius: 8px; }
+
+  .info-badge { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: var(--border); color: var(--muted); font-size: 9px; cursor: help; margin-left: 4px; font-style: normal; font-family: var(--font-ui); font-weight: 700; }
+
+  /* ── RESULTADO AMOSTRAS — BIG CARDS ── */
+  .res-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .res-big-card {
+    background: var(--res-bg);
+    border: 1px solid var(--res-border);
+    border-radius: 12px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+
+  .res-big-card--green {
+    background: rgba(61,96,32,0.35);
+    border-color: var(--accent);
+  }
+
+  .res-big-card--gold {
+    background: rgba(212,167,66,0.12);
+    border-color: var(--gold);
+  }
+
+  .res-big-label {
+    font-size: 9px;
+    color: var(--res-label);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .res-big-val {
+    font-family: var(--font-num);
+    font-size: 32px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+
+  .res-big-val--lg {
+    font-size: 38px;
+    color: var(--res-num-green);
+  }
+
+  .res-big-card--gold .res-big-val--lg {
+    color: var(--res-num-gold);
+  }
+
+  .res-big-sub {
+    font-size: 9px;
+    color: var(--res-label);
+    margin-top: 4px;
+    letter-spacing: 0.3px;
+    font-family: var(--font-ui);
+  }
+
+  .divider { height: 1px; background: var(--border); margin: 18px 0; }
+
+  .hint { font-size: 10px; color: var(--accent); margin-top: 4px; }
+
+  select option { background: #111a0c; }
+
+  /* Footer */
+  .footer {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* Splash screen de instalação */
+  #splashInstall {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,15,7,0.95);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  #splashInstall.show { display: flex; }
+
+  .splash-box {
+    background: var(--card);
+    border: 1px solid var(--accent3);
+    border-radius: 20px;
+    padding: 32px 24px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(74,154,16,0.3);
+  }
+
+  .splash-icon { font-size: 56px; margin-bottom: 16px; }
+
+  .splash-box h2 {
+    font-family: var(--font-ui);
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--accent2);
+    margin-bottom: 8px;
+  }
+
+  .splash-box p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .splash-btns { display: flex; flex-direction: column; gap: 10px; }
+
+  .splash-btns .btn-install {
+    padding: 14px;
+    background: var(--accent3);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(74,154,16,0.4);
+    touch-action: manipulation;
+  }
+
+  .splash-btns .btn-skip {
+    padding: 10px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+</style>
+</head>
+<body>
+
+<!-- Splash de instalação -->
+<div id="splashInstall">
+  <div class="splash-box">
+    <div class="splash-icon">⚖️</div>
+    <h2>AgroYield</h2>
+    <p>Instale o aplicativo para usar offline no campo, sem precisar de internet.</p>
+    <div class="splash-btns">
+      <button class="btn-install" id="splashBtnInstalar">📲 Instalar Agora</button>
+      <button class="btn-skip" onclick="fecharSplash()">Continuar sem instalar</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <header>
+    <div class="logo-area">
+      <div class="logo-icon">⚖️</div>
+      <div class="header-text">
+        <h1>AgroYield</h1>
+        <p>Coleta · 7 Amostras · Estimativa</p>
+      </div>
+    </div>
+    <button id="btnInstalar" onclick="instalarApp()">📲 Instalar</button>
+  </header>
+
+  <div id="offlineBanner">📡 Sem conexão · funcionando offline</div>
+
+  <!-- Cultura tabs -->
+  <div class="cultura-tabs">
+    <button class="cultura-btn active" data-cultura="soja" onclick="setCultura('soja',this)">🟡 Soja</button>
+    <button class="cultura-btn" data-cultura="milho" onclick="setCultura('milho',this)">🌽 Milho</button>
+  </div>
+
+  <!-- Main tabs -->
+  <div class="main-tabs">
+    <button class="main-tab active" onclick="switchTab('coleta',this)">📊 COLETA</button>
+    <button class="main-tab" onclick="switchTab('estimativa',this)">📈 ESTIMATIVA</button>
+    <button class="main-tab" onclick="switchTab('perdas',this)">🌾 PERDAS</button>
+    <button class="main-tab" onclick="switchTab('historico',this)">🕒 HISTÓRICO</button>
+  </div>
+
+  <!-- ===== TAB COLETA ===== -->
+  <div class="tab-panel active" id="tab-coleta">
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div class="card-header">📊 COLETA · 7 AMOSTRAS (3m lineares)</div>
+          <div class="card-body">
+            <div class="amostra-sel" id="amostraSelector">
+              <button class="amostra-btn active" data-amostra="1" onclick="selecionarAmostra(1)">A1</button>
+              <button class="amostra-btn" data-amostra="2" onclick="selecionarAmostra(2)">A2</button>
+              <button class="amostra-btn" data-amostra="3" onclick="selecionarAmostra(3)">A3</button>
+              <button class="amostra-btn" data-amostra="4" onclick="selecionarAmostra(4)">A4</button>
+              <button class="amostra-btn" data-amostra="5" onclick="selecionarAmostra(5)">A5</button>
+              <button class="amostra-btn" data-amostra="6" onclick="selecionarAmostra(6)">A6</button>
+              <button class="amostra-btn" data-amostra="7" onclick="selecionarAmostra(7)">A7</button>
+            </div>
+
+            <div class="field">
+              <label>🌱 Plantas na amostra (3m lineares)</label>
+              <input type="number" id="popAmostra" placeholder="Ex: 12" min="0" inputmode="numeric" oninput="salvarPopAmostra()">
+            </div>
+
+            <label style="font-size:10px; color:var(--muted)">🫘 Vagens de <strong style="color:var(--accent2)">1 pé</strong> — por tipo de grão</label>
+            <div class="vagem-grid">
+              <div class="vagem-card">
+                <div class="vagem-label">2 grãos</div>
+                <input type="number" id="v2g" placeholder="0" min="0" inputmode="numeric" oninput="salvarVagensAmostra()">
+              </div>
+              <div class="vagem-card">
+                <div class="vagem-label">3 grãos</div>
+                <input type="number" id="v3g" placeholder="0" min="0" inputmode="numeric" oninput="salvarVagensAmostra()">
+              </div>
+              <div class="vagem-card">
+                <div class="vagem-label">4 grãos</div>
+                <input type="number" id="v4g" placeholder="0" min="0" inputmode="numeric" oninput="salvarVagensAmostra()">
+              </div>
+            </div>
+
+            <div class="resultado-amostra">
+              <div class="res-am-item">
+                <div class="res-am-label">Vagens</div>
+                <div class="res-am-val" id="totalVagensAmostra">0</div>
+              </div>
+              <div class="res-am-item">
+                <div class="res-am-label">Grãos</div>
+                <div class="res-am-val" id="totalGraosAmostra">0</div>
+              </div>
+              <div class="res-am-item">
+                <div class="res-am-label">G/Vagem</div>
+                <div class="res-am-val" id="graosVagemAmostra">—</div>
+              </div>
+            </div>
+
+            <button class="btn-primary" onclick="processarMedias()">📐 PROCESSAR AMOSTRAS (21m)</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-header">📋 RESUMO DAS AMOSTRAS</div>
+          <div class="card-body" style="padding:0">
+            <table class="amostras-resumo">
+              <thead>
+                <tr>
+                  <th>Am.</th><th>Pl.</th><th>Vag/pé</th><th>Grãos</th><th>Gr/Vag</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaAmostras"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card-inline">
+          <div class="card-title"><span>🎯</span> Resultado das 7 Amostras · 21m</div>
+
+          <!-- Linha 1: Pop -->
+          <div class="res-grid-2" style="margin-bottom:8px">
+            <div class="res-big-card">
+              <div class="res-big-label">Plantas totais</div>
+              <div class="res-big-val" id="totalPlantasColeta">—</div>
+              <div class="res-big-sub">em 21m lineares</div>
+            </div>
+            <div class="res-big-card res-big-card--green">
+              <div class="res-big-label">População/ha</div>
+              <div class="res-big-val res-big-val--lg" id="popHaColeta">—</div>
+              <div class="res-big-sub">plantas estimadas</div>
+            </div>
+          </div>
+
+          <!-- Linha 2: Vagens -->
+          <div class="res-grid-2" style="margin-bottom:8px">
+            <div class="res-big-card">
+              <div class="res-big-label">Total vagens</div>
+              <div class="res-big-val" id="totalVagensColeta">—</div>
+              <div class="res-big-sub">soma 7 pés</div>
+            </div>
+            <div class="res-big-card res-big-card--gold">
+              <div class="res-big-label">Média vag/pé</div>
+              <div class="res-big-val res-big-val--lg" id="mediaVagemPeColeta">—</div>
+              <div class="res-big-sub">→ calculadora</div>
+            </div>
+          </div>
+
+          <!-- Linha 3: Grãos + Amostras -->
+          <div class="res-grid-2">
+            <div class="res-big-card">
+              <div class="res-big-label">Grãos/vagem</div>
+              <div class="res-big-val" id="mediaGeralGraos">—</div>
+              <div class="res-big-sub">→ calculadora</div>
+            </div>
+            <div class="res-big-card">
+              <div class="res-big-label">Amostras</div>
+              <div class="res-big-val" id="amostrasValidas">—</div>
+              <div class="res-big-sub">preenchidas</div>
+            </div>
+          </div>
+
+          <div class="hint" id="hintAutoLoad" style="margin-top:10px; text-align:center; display:none">⚡ Valores carregados automaticamente na Estimativa</div>
+          <div style="margin-top:6px; text-align:center; color:var(--muted); font-size:9px; letter-spacing:0.5px">Preencha A7 para carregar automático · ou clique em Processar</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB ESTIMATIVA ===== -->
+  <div class="tab-panel" id="tab-estimativa">
+
+    <div id="coletaBadge" class="coleta-badge">
+      <div class="dot"></div>
+      <span id="coletaBadgeText">Coleta: — gr/vagem · — vag/pé</span>
+    </div>
+
+    <div class="grid-2">
+      <div class="card-inline">
+        <div class="card-title"><span>📐</span> Área e Plantio</div>
+        <div class="field">
+          <label>Área plantada (ha)</label>
+          <input type="number" id="area" value="100" min="0.1" step="0.1" inputmode="decimal" oninput="calcular()">
+        </div>
+        <div class="field">
+          <label>Espaçamento entre linhas (cm)</label>
+          <input type="number" id="espacamento" value="50" min="20" max="100" inputmode="numeric" oninput="calcular()">
+        </div>
+        <div class="field">
+          <label>Plantas por metro linear</label>
+          <input type="number" id="plantasMetro" value="14" min="1" max="30" step="0.5" inputmode="decimal" oninput="calcular()">
+          <div class="unit" id="popLabel">≈ 280.000 plantas/ha</div>
+        </div>
+        <div class="field">
+          <label>Estande final (%)</label>
+          <div class="range-group">
+            <input type="range" id="estandeRange" min="50" max="100" value="90" oninput="syncEstande(this.value);calcular()">
+            <span class="range-val" id="estandeVal">90%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-inline">
+        <div class="card-title"><span>🌿</span> Componentes de Produção</div>
+        <div class="field">
+          <label id="comp1Label">Vagens por planta</label>
+          <input type="number" id="comp1" value="40" min="1" inputmode="numeric" oninput="calcular()">
+        </div>
+        <div class="field">
+          <label id="comp2Label">Grãos por vagem <i class="info-badge" title="Use coleta de campo">?</i></label>
+          <input type="number" id="comp2" value="2.8" min="1" step="0.01" inputmode="decimal" oninput="calcular()">
+          <div class="hint" id="hintColeta" style="display:none">⬅ Da coleta de campo</div>
+        </div>
+        <div class="field">
+          <label>Peso de 1000 grãos (g)</label>
+          <input type="number" id="pmg" value="150" min="50" max="600" inputmode="numeric" oninput="calcular()">
+        </div>
+        <div class="field">
+          <label>Umidade na colheita (%)</label>
+          <div class="range-group">
+            <input type="range" id="umidadeRange" min="10" max="30" value="14" oninput="syncUmidade(this.value);calcular()">
+            <span class="range-val" id="umidadeVal">14%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-inline">
+      <div class="card-title"><span>⚠️</span> Perdas</div>
+      <div class="grid-2">
+        <div>
+          <div class="field">
+            <label>Perda colheita (%)</label>
+            <div class="range-group">
+              <input type="range" id="perdaColheita" min="0" max="15" value="3" step="0.5" oninput="syncPerda('perdaColheita','pcVal',this.value);calcular()">
+              <span class="range-val" id="pcVal">3%</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Pragas/Doenças (%)</label>
+            <div class="range-group">
+              <input type="range" id="perdaPD" min="0" max="30" value="5" oninput="syncPerda('perdaPD','pdVal',this.value);calcular()">
+              <span class="range-val" id="pdVal">5%</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="field">
+            <label>Desconto umidade (base <span id="baseUmidade">13</span>%)</label>
+            <div class="fator-row" style="border:none;padding:0;margin-top:6px">
+              <span class="fator-label" style="font-size:10px">Automático</span>
+              <span class="fator-val" id="descontoUmidadeVal">—</span>
+            </div>
+          </div>
+          <div class="field" style="margin-top:10px">
+            <label>Quebra total</label>
+            <div class="fator-row" style="border:none;padding:0;margin-top:6px">
+              <span class="fator-label" style="font-size:10px">Perdas + desconto</span>
+              <span class="fator-val" id="quebraTotal">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-calc" onclick="calcular();salvarHistorico()">▶ CALCULAR E SALVAR</button>
+
+    <div class="result-card">
+      <div class="result-header">⚡ Resultado</div>
+      <div class="result-main">
+        <div class="result-item highlight">
+          <div class="r-label">Prod. Líquida</div>
+          <div class="r-val" id="rProdLiq">—</div>
+          <div class="r-unit" id="rProdLiqUnit">sacas</div>
+        </div>
+        <div class="result-item">
+          <div class="r-label">Produtividade</div>
+          <div class="r-val" id="rProdHa">—</div>
+          <div class="r-unit" id="rProdHaUnit">sc/ha</div>
+        </div>
+        <div class="result-item">
+          <div class="r-label">Prod. Bruta</div>
+          <div class="r-val" id="rBruta">—</div>
+          <div class="r-unit">toneladas</div>
+        </div>
+      </div>
+      <div class="prod-bar-wrap">
+        <div class="prod-bar-label"><span>0</span><span id="barRef">— sc/ha</span></div>
+        <div class="prod-bar-track"><div class="prod-bar-fill" id="prodBar" style="width:0%"></div></div>
+      </div>
+      <div class="perdas-list" id="perdasList"></div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="card-title" style="margin-bottom:10px"><span>📊</span> Cenários</div>
+    <div class="cenarios">
+      <div class="cenario-card pessimista">
+        <div class="c-label">Pessimista −20%</div>
+        <div class="c-val" id="cPessimista">—</div>
+        <div class="c-unit" id="cPessimistaU">sc</div>
+      </div>
+      <div class="cenario-card realista">
+        <div class="c-label">⭐ Realista</div>
+        <div class="c-val" id="cRealista">—</div>
+        <div class="c-unit" id="cRealistaU">sc</div>
+      </div>
+      <div class="cenario-card otimista">
+        <div class="c-label">Otimista +20%</div>
+        <div class="c-val" id="cOtimista">—</div>
+        <div class="c-unit" id="cOtimistaU">sc</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB PERDAS DE COLHEITA ===== -->
+  <div class="tab-panel" id="tab-perdas">
+
+    <!-- Cabeçalho geral -->
+    <div class="card-inline" style="margin-bottom:14px">
+      <div class="card-title"><span>🌾</span> Perda de Colheita — Área Coletada</div>
+      <p style="font-size:10px;color:var(--muted);margin-bottom:14px;line-height:1.7">
+        Demarca um retângulo no chão após a passagem da colhedora. Meça o comprimento e a largura, conte os grãos dentro da área e repita em vários pontos.
+      </p>
+      <div class="grid-2">
+        <div class="field">
+          <label>Cultura</label>
+          <select id="perdaCultura" onchange="calcularPerdas()">
+            <option value="soja">🟡 Soja</option>
+            <option value="milho">🌽 Milho</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Área da lavoura (ha)</label>
+          <input type="number" id="perdaArea" value="100" min="0.1" step="0.1" inputmode="decimal" oninput="calcularPerdas()">
+        </div>
+      </div>
+      <div class="field">
+        <label>Produtividade esperada (sc/ha)</label>
+        <input type="number" id="perdaProdEsperada" value="60" min="10" inputmode="numeric" oninput="calcularPerdas()">
+      </div>
+      <div class="field">
+        <label>Peso de 1000 grãos — PMG (g)</label>
+        <input type="number" id="perdaPMG" value="150" min="50" max="400" inputmode="numeric" oninput="calcularPerdas()">
+        <div class="unit" id="perdaPMGHint">Soja: ~150 g · Milho: ~350 g</div>
+      </div>
+    </div>
+
+    <!-- Pontos de coleta -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+        <span>📍 PONTOS DE COLETA</span>
+        <button onclick="adicionarPonto()" style="background:var(--accent3);border:none;color:#fff;border-radius:6px;padding:4px 10px;font-size:11px;font-family:var(--font-ui);font-weight:700;cursor:pointer">+ Ponto</button>
+      </div>
+      <div class="card-body" style="padding:12px">
+
+        <p style="font-size:10px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+          Para cada ponto: meça o retângulo no chão (ex: 2m × 0,5m = 1 m²) e conte os grãos dentro. Mínimo recomendado: <strong style="color:var(--accent2)">5 pontos</strong>.
+        </p>
+
+        <div id="pontosLista" style="display:flex;flex-direction:column;gap:8px"></div>
+
+        <!-- Totais dos pontos -->
+        <div style="margin-top:12px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;display:flex;justify-content:space-around;flex-wrap:wrap;gap:8px" id="resumoPontos">
+          <div style="text-align:center">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-ui)">Pontos</div>
+            <div style="font-size:22px;font-weight:700;color:#fff;font-family:var(--font-num)" id="totalPontosVal">0</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-ui)">Área total</div>
+            <div style="font-size:22px;font-weight:700;color:#fff;font-family:var(--font-num)" id="totalAreaPontosVal">0,00</div>
+            <div style="font-size:9px;color:var(--muted)">m²</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-ui)">Grãos totais</div>
+            <div style="font-size:22px;font-weight:700;color:var(--accent2);font-family:var(--font-num)" id="totalGraosPontosVal">0</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-ui)">Grãos/m²</div>
+            <div style="font-size:22px;font-weight:700;color:var(--gold);font-family:var(--font-num)" id="graosM2Val">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pré-colheita -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">🍃 PERDAS PRÉ-COLHEITA (debulha natural)</div>
+      <div class="card-body">
+        <p style="font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.6">
+          Opcional — meça a mesma área <strong style="color:var(--accent2)">antes</strong> da colhedora passar para descontar a debulha natural.
+        </p>
+        <div class="grid-2">
+          <div class="field">
+            <label>Comprimento pré (m)</label>
+            <input type="number" id="preComp" placeholder="Ex: 2" min="0" step="0.1" inputmode="decimal" oninput="calcularPerdas()">
+          </div>
+          <div class="field">
+            <label>Largura pré (m)</label>
+            <input type="number" id="preLarg" placeholder="Ex: 0.5" min="0" step="0.1" inputmode="decimal" oninput="calcularPerdas()">
+          </div>
+        </div>
+        <div class="field">
+          <label>Grãos na área pré-colheita</label>
+          <input type="number" id="perdaPreColheita" placeholder="Ex: 3" min="0" inputmode="numeric" oninput="calcularPerdas()">
+          <div class="unit" id="preAreaHint">Área pré: — m²</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resultado -->
+    <div class="result-card" id="perdaResultCard">
+      <div class="result-header">🎯 Resultado — Perda de Colheita</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="res-big-card res-big-card--green">
+          <div class="res-big-label">Apenas colhedora</div>
+          <div class="res-big-val res-big-val--lg" id="perdaScHaMaquina" style="font-size:30px">—</div>
+          <div class="res-big-sub">sc/ha (descontado pré)</div>
+        </div>
+        <div class="res-big-card res-big-card--gold">
+          <div class="res-big-label">Perda total</div>
+          <div class="res-big-val res-big-val--lg" id="perdaScHa" style="font-size:30px;color:var(--res-num-gold)">—</div>
+          <div class="res-big-sub">sc/ha (colhedora + campo)</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+        <div class="res-big-card">
+          <div class="res-big-label">kg/ha perdido</div>
+          <div class="res-big-val" id="perdaKgHa" style="font-size:22px">—</div>
+        </div>
+        <div class="res-big-card">
+          <div class="res-big-label">% da prod.</div>
+          <div class="res-big-val" id="perdaPerc" style="font-size:22px">—</div>
+        </div>
+        <div class="res-big-card">
+          <div class="res-big-label">Sacas na área</div>
+          <div class="res-big-val" id="perdaSacasTotal" style="font-size:22px">—</div>
+        </div>
+      </div>
+
+      <!-- Semáforo -->
+      <div id="perdaSemaforo" style="text-align:center;padding:12px;border-radius:10px;border:1px solid var(--border);background:rgba(0,0,0,0.2)">
+        <div id="perdaStatus" style="font-size:18px;font-weight:700;margin-bottom:4px;font-family:var(--font-ui)">—</div>
+        <div id="perdaStatusText" style="font-size:11px;color:var(--muted);font-family:var(--font-ui)">Adicione pelo menos 1 ponto de coleta</div>
+      </div>
+
+      <div style="margin-top:12px;padding:10px;background:rgba(0,0,0,0.15);border-radius:8px;font-size:10px;color:var(--muted);line-height:1.8">
+        <strong style="color:var(--accent2);font-family:var(--font-ui)">Tolerâncias técnicas (Embrapa):</strong><br>
+        🟡 Soja: &lt; 1 sc/ha = ótimo · 1–2 sc/ha = aceitável · &gt; 2 sc/ha = crítico<br>
+        🌽 Milho: &lt; 3 sc/ha = ótimo · 3–6 sc/ha = aceitável · &gt; 6 sc/ha = crítico
+      </div>
+    </div>
+
+    <!-- Dicas regulagem -->
+    <div class="card" style="margin-top:14px">
+      <div class="card-header">🔧 REGULAGEM — ONDE OCORRE A PERDA</div>
+      <div class="card-body">
+        <div id="dicasRegulagemList" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== TAB HISTÓRICO ===== -->
+  <div class="tab-panel" id="tab-historico">
+    <div class="historico" style="margin-top:8px">
+      <div class="historico-header">
+        <h3>🕒 Histórico</h3>
+        <button class="btn-clear" onclick="limparHistorico()">Limpar</button>
+      </div>
+      <div class="historico-list" id="historicoList">
+        <div class="empty-state">Nenhum cálculo salvo ainda</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    🔁 Funciona offline · Dados salvos no dispositivo<br>
+    Desenvolvido por João Divino Barbosa · São Benedito do Rio Preto· Maranhão
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════════════
+// PWA: SERVICE WORKER + MANIFEST (inline, arquivo único)
+// ═══════════════════════════════════════════════════
+
+(function() {
+  // ── MANIFEST inline ──
+  const manifest = {
+    name: "AgroYield · Coleta + Estimativa",
+    short_name: "AgroYield",
+    description: "Coleta de campo 7 amostras e estimativa de produção de grãos",
+    start_url: "./",
+    display: "standalone",
+    background_color: "#0a0f07",
+    theme_color: "#0a0f07",
+    orientation: "portrait-primary",
+    icons: [
+      {
+        src: "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="38" fill="#0a0f07"/><rect width="192" height="192" rx="38" fill="#4a9a10" opacity="0.35"/><text x="96" y="80" font-size="64" text-anchor="middle">⚖️</text><text x="60" y="152" font-size="52" text-anchor="middle">🌾</text><text x="132" y="152" font-size="52" text-anchor="middle">🌽</text></svg>`),
+        sizes: "192x192",
+        type: "image/svg+xml",
+        purpose: "any maskable"
+      },
+      {
+        src: "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#0a0f07"/><rect width="512" height="512" rx="96" fill="#4a9a10" opacity="0.35"/><text x="256" y="220" font-size="170" text-anchor="middle">⚖️</text><text x="140" y="420" font-size="150" text-anchor="middle">🌾</text><text x="370" y="420" font-size="150" text-anchor="middle">🌽</text></svg>`),
+        sizes: "512x512",
+        type: "image/svg+xml",
+        purpose: "any maskable"
+      }
+    ]
+  };
+
+  const blob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
+  const manifestUrl = URL.createObjectURL(blob);
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = manifestUrl;
+  document.head.appendChild(link);
+
+  // ── SERVICE WORKER inline — 100% OFFLINE ──
+  const swCode = `
+const CACHE = 'agro-yield-v3';
+
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => c.add(self.location.href))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE).map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+
+  // Bloqueia requests externos — tudo offline
+  const url = new URL(e.request.url);
+  const isSameOrigin = url.origin === self.location.origin || e.request.url.startsWith('blob:');
+
+  if (!isSameOrigin) {
+    // Retorna vazio silenciosamente para fontes/recursos externos
+    e.respondWith(new Response('', { status: 200 }));
+    return;
+  }
+
+  // Cache-first para tudo do próprio app
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(r => {
+        if (r && r.status === 200) {
+          const clone = r.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return r;
+      }).catch(() => new Response('Offline', { status: 503 }));
+    })
+  );
+});
+`;
+
+  if ('serviceWorker' in navigator) {
+    const swBlob = new Blob([swCode], {type: 'application/javascript'});
+    const swUrl = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl, {scope: './'})
+      .then(reg => console.log('SW registrado:', reg.scope))
+      .catch(err => console.warn('SW erro:', err));
+  }
+
+  // ── Detectar offline ──
+  function atualizarOnline() {
+    const banner = document.getElementById('offlineBanner');
+    if(banner) banner.style.display = navigator.onLine ? 'none' : 'block';
+  }
+  window.addEventListener('online', atualizarOnline);
+  window.addEventListener('offline', atualizarOnline);
+  window.addEventListener('load', atualizarOnline);
+})();
+
+// ── Prompt de instalação ──
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('btnInstalar');
+  if(btn) btn.style.display = 'flex';
+
+  // Mostrar splash se primeira vez
+  const jaViu = localStorage.getItem('agro_splash_visto');
+  if(!jaViu) {
+    document.getElementById('splashInstall').classList.add('show');
+    document.getElementById('splashBtnInstalar').onclick = instalarApp;
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  const btn = document.getElementById('btnInstalar');
+  if(btn) btn.style.display = 'none';
+  document.getElementById('splashInstall').classList.remove('show');
+});
+
+function instalarApp() {
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(r => {
+    if(r.outcome === 'accepted') console.log('App instalado');
+    deferredPrompt = null;
+    document.getElementById('btnInstalar').style.display = 'none';
+  });
+}
+
+function fecharSplash() {
+  localStorage.setItem('agro_splash_visto', '1');
+  document.getElementById('splashInstall').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════════════
+// LÓGICA DO APLICATIVO
+// ═══════════════════════════════════════════════════
+
+const culturas = {
+  soja:    { comp1:'Vagens por planta',    comp2:'Grãos por vagem',       c1:40,  c2:2.8, pmg:150, esp:50, ppm:14, saca:60, umBase:13, ref:60,  unit:'sc' },
+  milho:   { comp1:'Espigas por planta',   comp2:'Fileiras por espiga',   c1:1.1, c2:16,  pmg:350, esp:80, ppm:4,  saca:60, umBase:13, ref:120, unit:'sc' },
+};
+
+let culturaSel = 'soja';
+let historico = JSON.parse(localStorage.getItem('agro_yield_hist') || '[]');
+
+// Amostras
+let amostraAtual = 1;
+let dadosPop = {1:0,2:0,3:0,4:0,5:0,6:0,7:0};
+let dadosVagens = {};
+for(let i=1;i<=7;i++) dadosVagens[i] = {v2:0,v3:0,v4:0};
+let mediaGraosVagemGlobal = null;
+
+// ── AMOSTRAS ──
+function selecionarAmostra(n) {
+  amostraAtual = n;
+  document.querySelectorAll('.amostra-btn').forEach(b =>
+    b.classList.toggle('active', parseInt(b.dataset.amostra) === n));
+  carregarAmostra();
+}
+
+function carregarAmostra() {
+  document.getElementById('popAmostra').value = dadosPop[amostraAtual] || '';
+  document.getElementById('v2g').value = dadosVagens[amostraAtual].v2 || '';
+  document.getElementById('v3g').value = dadosVagens[amostraAtual].v3 || '';
+  document.getElementById('v4g').value = dadosVagens[amostraAtual].v4 || '';
+  atualizarTotaisAmostra();
+}
+
+function salvarPopAmostra() {
+  dadosPop[amostraAtual] = parseFloat(document.getElementById('popAmostra').value) || 0;
+  atualizarTabelaResumo();
+  atualizarBotaoPreenchido();
+  recalcularResumoGlobal();
+}
+
+function salvarVagensAmostra() {
+  dadosVagens[amostraAtual].v2 = parseInt(document.getElementById('v2g').value) || 0;
+  dadosVagens[amostraAtual].v3 = parseInt(document.getElementById('v3g').value) || 0;
+  dadosVagens[amostraAtual].v4 = parseInt(document.getElementById('v4g').value) || 0;
+  atualizarTotaisAmostra();
+  atualizarTabelaResumo();
+  atualizarBotaoPreenchido();
+}
+
+function atualizarTotaisAmostra() {
+  const d = dadosVagens[amostraAtual];
+  const tv = d.v2 + d.v3 + d.v4;
+  const tg = (d.v2*2) + (d.v3*3) + (d.v4*4);
+  document.getElementById('totalVagensAmostra').textContent = tv;
+  document.getElementById('totalGraosAmostra').textContent = tg;
+  document.getElementById('graosVagemAmostra').textContent = tv > 0 ? (tg/tv).toFixed(2) : '—';
+}
+
+function atualizarBotaoPreenchido() {
+  for(let i=1;i<=7;i++) {
+    const d = dadosVagens[i];
+    const tv = d.v2+d.v3+d.v4;
+    const btn = document.querySelector(`.amostra-btn[data-amostra="${i}"]`);
+    if(btn) btn.classList.toggle('preenchido', tv>0 || dadosPop[i]>0);
+  }
+}
+
+function atualizarTabelaResumo() {
+  const tbody = document.getElementById('tabelaAmostras');
+  let rows = '';
+  for(let i=1;i<=7;i++) {
+    const d = dadosVagens[i];
+    const tv = d.v2+d.v3+d.v4;
+    const tg = (d.v2*2)+(d.v3*3)+(d.v4*4);
+    const gv = tv > 0 ? (tg/tv).toFixed(2) : '—';
+    const ativa = i===amostraAtual ? ' class="ativa"' : '';
+    if(tv===0 && dadosPop[i]===0) {
+      rows += `<tr${ativa}><td style="color:var(--accent3);font-weight:700">A${i}</td><td class="vazia">—</td><td class="vazia">—</td><td class="vazia">—</td><td class="vazia">—</td></tr>`;
+    } else {
+      // tv = total vagens do 1 pé contado nessa amostra
+      rows += `<tr${ativa}><td style="color:var(--accent3);font-weight:700">A${i}</td><td>${dadosPop[i]||'—'}</td><td>${tv||'—'}</td><td>${tg||'—'}</td><td>${gv}</td></tr>`;
+    }
+  }
+  tbody.innerHTML = rows;
+}
+
+let _debounceTimer = null;
+
+function recalcularResumoGlobal() {
+  // Totais das 7 amostras (21m lineares)
+  let totalPlantas = 0, totalVagens = 0, totalGraos = 0;
+  let amValidas = 0, amPopV = 0;
+
+  for(let i=1;i<=7;i++) {
+    const d = dadosVagens[i];
+    const tv = d.v2 + d.v3 + d.v4;
+    const tg = (d.v2*2) + (d.v3*3) + (d.v4*4);
+    if(tv > 0) { totalVagens += tv; totalGraos += tg; amValidas++; }
+    if(dadosPop[i] > 0) { totalPlantas += dadosPop[i]; amPopV++; }
+  }
+
+  // Grãos/vagem global
+  const mediaGV = totalVagens > 0 ? totalGraos / totalVagens : null;
+
+  // Vagens/pé = média das contagens por pé
+  let somaVagensPe = 0, amPeV = 0;
+  for(let i=1;i<=7;i++) {
+    const d = dadosVagens[i];
+    const tv = d.v2 + d.v3 + d.v4;
+    if(tv > 0) { somaVagensPe += tv; amPeV++; }
+  }
+  const vagPe = amPeV > 0 ? somaVagensPe / amPeV : null;
+
+  // Pop/ha
+  const espEl = document.getElementById('espacamento');
+  const esp = espEl ? (parseFloat(espEl.value) || 50) : 50;
+  const espM = esp / 100;
+  const popHa = amPopV > 0 ? Math.round((totalPlantas / 21) * (10000 / espM)) : null;
+
+  // Atualizar painel de resumo (sem chamar calcular)
+  const elPT = document.getElementById('totalPlantasColeta');
+  const elPH = document.getElementById('popHaColeta');
+  const elTV = document.getElementById('totalVagensColeta');
+  const elVP = document.getElementById('mediaVagemPeColeta');
+  const elGV = document.getElementById('mediaGeralGraos');
+  const elAV = document.getElementById('amostrasValidas');
+  if(elPT) elPT.textContent = amPopV > 0 ? totalPlantas : '—';
+  if(elPH) elPH.textContent = popHa ? fmt(popHa) : '—';
+  if(elTV) elTV.textContent = totalVagens > 0 ? totalVagens : '—';
+  if(elVP) elVP.textContent = vagPe ? vagPe.toFixed(1) : '—';
+  if(elGV) elGV.textContent = mediaGV ? mediaGV.toFixed(2) : '—';
+  if(elAV) elAV.textContent = amValidas > 0 ? amValidas+'/7' : '—';
+
+  // Hint autoload
+  const d7 = dadosVagens[7];
+  const tv7 = d7.v2 + d7.v3 + d7.v4;
+  const hintEl = document.getElementById('hintAutoLoad');
+  if(hintEl && tv7 > 0 && mediaGV !== null) hintEl.style.display = 'block';
+
+  // Auto-carregar na calculadora com debounce (500ms) para não travar
+  if(mediaGV !== null) {
+    mediaGraosVagemGlobal = mediaGV;
+    clearTimeout(_debounceTimer);
+    _debounceTimer = setTimeout(() => {
+      aplicarNaCalculadora(mediaGV, vagPe, popHa, amValidas, false);
+    }, 500);
+  }
+}
+
+function aplicarNaCalculadora(mediaGV, vagPe, popHa, amValidas, comAlerta) {
+  // Grãos/vagem → campo comp2
+  document.getElementById('comp2').value = mediaGV.toFixed(2);
+  document.getElementById('hintColeta').style.display = 'block';
+
+  // Vagens/pé → campo comp1 (se cultura for soja/feijão que usa vagens/planta)
+  // vagPe = totalVagens / totalPlantas  →  ex: 46 vagens / 28 plantas = 1.6 vag/pé
+  if(vagPe !== null && vagPe > 0 && vagPe < 200 && culturaSel === 'soja') {
+    document.getElementById('comp1').value = vagPe.toFixed(1);
+  }
+
+  // Plantas/ha → converte para plantas/metro e preenche o campo
+  // plantas/metro = (popHa × esp_m) / 10000
+  // Estande vai para 100% pois a contagem de campo já é a população real
+  if(popHa !== null && popHa > 0) {
+    const esp = parseFloat(document.getElementById('espacamento').value) || 50;
+    const espM = esp / 100;
+    const ppm = (popHa * espM) / 10000;
+    document.getElementById('plantasMetro').value = ppm.toFixed(2);
+    // Força estande 100% — população da coleta é real, sem desconto
+    document.getElementById('estandeRange').value = 100;
+    document.getElementById('estandeVal').textContent = '100%';
+  }
+
+  // Badge
+  const badge = document.getElementById('coletaBadge');
+  badge.classList.add('show');
+  document.getElementById('coletaBadgeText').textContent =
+    `Coleta: ${mediaGV.toFixed(2)} gr/v · ${vagPe ? vagPe.toFixed(1)+' vag/pé · ' : ''}${amValidas}/7 am.`;
+
+  mediaGraosVagemGlobal = mediaGV;
+  calcular();
+
+  if(comAlerta) {
+    const esp = parseFloat(document.getElementById('espacamento').value) || 50;
+    const espM = esp / 100;
+    let totalPlantas = 0, totalVagens = 0;
+    for(let i=1;i<=7;i++){
+      totalPlantas += dadosPop[i];
+      totalVagens += dadosVagens[i].v2 + dadosVagens[i].v3 + dadosVagens[i].v4;
+    }
+    const popHaCalc = totalPlantas > 0 ? fmt(Math.round((totalPlantas/21)*(10000/espM))) : '—';
+    alert(
+      `✅ Amostras processadas! (7 × 3m = 21m)\n\n` +
+      `🌱 Plantas totais (21m): ${totalPlantas}\n` +
+      `🌾 Pop. estimada: ${popHaCalc} plantas/ha\n` +
+      `🫘 Vagens totais: ${totalVagens}\n` +
+      `📌 Vagens/pé: ${vagPe ? vagPe.toFixed(1) : '—'}\n` +
+      `📊 Grãos/vagem: ${mediaGV.toFixed(2)}\n` +
+      `✅ ${amValidas}/7 amostras\n\n` +
+      `→ Valores enviados para a Estimativa.`
+    );
+  }
+}
+
+function processarMedias() {
+  let totalPlantas=0, totalVagens=0, totalGraos=0, amValidas=0, amPopV=0;
+  for(let i=1;i<=7;i++){
+    const d=dadosVagens[i];
+    const tv=d.v2+d.v3+d.v4;
+    const tg=(d.v2*2)+(d.v3*3)+(d.v4*4);
+    if(tv>0){ totalVagens+=tv; totalGraos+=tg; amValidas++; }
+    if(dadosPop[i]>0){ totalPlantas+=dadosPop[i]; amPopV++; }
+  }
+  if(amValidas===0){ alert('⚠️ Preencha pelo menos uma amostra de vagens.'); return; }
+
+  const mediaGV = totalGraos / totalVagens;
+  // Vagens/pé = média das contagens individuais (cada amostra = 1 pé)
+  const vagPe = amValidas > 0 ? totalVagens / amValidas : null;
+  const esp = parseFloat(document.getElementById('espacamento').value) || 50;
+  const espM = esp / 100;
+  const popHa = totalPlantas > 0 ? Math.round((totalPlantas/21)*(10000/espM)) : null;
+
+  mediaGraosVagemGlobal = mediaGV;
+  aplicarNaCalculadora(mediaGV, vagPe, popHa, amValidas, true);
+}
+
+// ── TABS ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── CULTURAS ──
+function setCultura(c, btn) {
+  culturaSel = c;
+  document.querySelectorAll('.cultura-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const cfg = culturas[c];
+  document.getElementById('comp1Label').textContent = cfg.comp1;
+  document.getElementById('comp2Label').innerHTML = cfg.comp2+' <i class="info-badge" title="Use coleta de campo">?</i>';
+  document.getElementById('comp1').value = cfg.c1;
+  if(mediaGraosVagemGlobal===null) document.getElementById('comp2').value = cfg.c2;
+  document.getElementById('pmg').value = cfg.pmg;
+  document.getElementById('espacamento').value = cfg.esp;
+  document.getElementById('plantasMetro').value = cfg.ppm;
+  document.getElementById('baseUmidade').textContent = cfg.umBase;
+  // Sync aba perdas
+  const perdaCultEl = document.getElementById('perdaCultura');
+  if(perdaCultEl) { perdaCultEl.value = c; calcularPerdas(); }
+  calcular();
+}
+
+// ── SYNC ──
+function syncEstande(v){ document.getElementById('estandeVal').textContent=v+'%'; }
+function syncUmidade(v){ document.getElementById('umidadeVal').textContent=v+'%'; }
+function syncPerda(id,vid,v){ document.getElementById(vid).textContent=v+'%'; }
+function fmt(n,dec=0){ return n.toLocaleString('pt-BR',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
+
+// ── CALCULAR ──
+function calcular() {
+  const cfg = culturas[culturaSel];
+  const area   = parseFloat(document.getElementById('area').value)||0;
+  const esp    = parseFloat(document.getElementById('espacamento').value)||1;
+  const ppm    = parseFloat(document.getElementById('plantasMetro').value)||0;
+  const estande= parseFloat(document.getElementById('estandeRange').value)/100;
+  const comp1  = parseFloat(document.getElementById('comp1').value)||0;
+  const comp2  = parseFloat(document.getElementById('comp2').value)||0;
+  const pmg    = parseFloat(document.getElementById('pmg').value)||1;
+  const umidade= parseFloat(document.getElementById('umidadeRange').value);
+  const perdaC = parseFloat(document.getElementById('perdaColheita').value)/100;
+  const perdaPD= parseFloat(document.getElementById('perdaPD').value)/100;
+
+  const plantasHa = (10000/(esp/100))*ppm*estande;
+  document.getElementById('popLabel').textContent = '≈ '+fmt(plantasHa)+' plantas/ha';
+
+  let prodBrutaHa;
+  if(culturaSel==='milho') prodBrutaHa=(plantasHa*comp1*comp2*30*pmg)/1e9*1000;
+  else prodBrutaHa=(plantasHa*comp1*comp2*pmg)/1e6;
+
+  const umBase=cfg.umBase;
+  const fatorUmidade=(100-umidade)/(100-umBase);
+  const descontoUm=(1-fatorUmidade)*100;
+  document.getElementById('descontoUmidadeVal').textContent=(descontoUm>=0?'+':'')+fmt(descontoUm,1)+'%';
+  document.getElementById('descontoUmidadeVal').className='fator-val '+(descontoUm<-1?'neg':descontoUm>0.5?'pos':'');
+  document.getElementById('baseUmidade').textContent=umBase;
+
+  const prodAjustHa=prodBrutaHa*fatorUmidade;
+  const totalPerdas=perdaC+perdaPD;
+  const prodLiquidaHa=prodAjustHa*(1-totalPerdas);
+  const prodBrutaTotal=prodBrutaHa*area;
+  const prodLiquidaKg=prodLiquidaHa*area;
+  const prodLiquidaSacas=prodLiquidaKg/cfg.saca;
+  const prodLiquidaScHa=prodLiquidaHa/cfg.saca;
+  const quebraP=((1-(prodLiquidaHa/prodBrutaHa))*100);
+
+  document.getElementById('quebraTotal').textContent=fmt(quebraP,1)+'%';
+  document.getElementById('quebraTotal').className='fator-val '+(quebraP>15?'neg':quebraP>8?'warn':'pos');
+  document.getElementById('rProdLiq').textContent=fmt(prodLiquidaSacas);
+  document.getElementById('rProdLiqUnit').textContent=cfg.unit==='sc'?'sacas de '+cfg.saca+'kg':'arrobas';
+  document.getElementById('rProdHa').textContent=fmt(prodLiquidaScHa,1);
+  document.getElementById('rProdHaUnit').textContent=cfg.unit+'/ha';
+  document.getElementById('rBruta').textContent=fmt(prodBrutaTotal/1000,1);
+
+  const perc=Math.min((prodLiquidaScHa/cfg.ref)*100,120);
+  document.getElementById('prodBar').style.width=Math.min(perc,100)+'%';
+  document.getElementById('barRef').textContent='Ref: '+cfg.ref+' '+cfg.unit+'/ha';
+  document.getElementById('prodBar').style.background=
+    perc<60?'linear-gradient(90deg,#a03030,#e05050)':
+    perc<80?'linear-gradient(90deg,#a07010,#e0a030)':
+    'linear-gradient(90deg,var(--accent3),var(--accent))';
+
+  const pl=document.getElementById('perdasList');
+  pl.innerHTML='';
+  const tags=[
+    {label:'🚜 Colheita: '+(perdaC*100).toFixed(1)+'%', level:perdaC>0.06?'high':perdaC>0.03?'mid':'low'},
+    {label:'🐛 Pragas: '+(perdaPD*100).toFixed(1)+'%',  level:perdaPD>0.15?'high':perdaPD>0.08?'mid':'low'},
+    {label:'💧 Umidade: '+fmt(Math.abs(descontoUm),1)+'%', level:Math.abs(descontoUm)>3?'mid':'low'},
+  ];
+  if(mediaGraosVagemGlobal!==null) tags.push({label:'📊 Campo: '+mediaGraosVagemGlobal.toFixed(2)+' gr/v', level:'low'});
+  tags.forEach(t=>{ const el=document.createElement('span'); el.className='perda-tag '+t.level; el.textContent=t.label; pl.appendChild(el); });
+
+  const cUnit=cfg.unit==='sc'?'sacas':'arrobas';
+  ['Pessimista','Realista','Otimista'].forEach((c,i)=>{
+    const mult=[0.8,1,1.2][i];
+    document.getElementById('c'+c).textContent=fmt(prodLiquidaSacas*mult);
+    document.getElementById('c'+c+'U').textContent=cUnit+' ('+fmt(prodLiquidaScHa*mult,1)+' '+cfg.unit+'/ha)';
+  });
+
+  window._lastCalc={area,prodLiquidaSacas,prodLiquidaScHa,cultura:culturaSel,cfg,comp2,
+    amostrasUsadas:mediaGraosVagemGlobal!==null?document.getElementById('amostrasValidas').textContent:'—'};
+}
+
+// ── HISTÓRICO ──
+function salvarHistorico() {
+  if(!window._lastCalc) return;
+  const {area,prodLiquidaSacas,prodLiquidaScHa,cultura,cfg,comp2,amostrasUsadas}=window._lastCalc;
+  const nomes={soja:'Soja',milho:'Milho'};
+  historico.unshift({
+    cultura:nomes[cultura],area,
+    prod:Math.round(prodLiquidaSacas),
+    scHa:prodLiquidaScHa.toFixed(1),
+    unit:cfg.unit,comp2,amostras:amostrasUsadas,
+    data:new Date().toLocaleDateString('pt-BR')
+  });
+  if(historico.length>10) historico.pop();
+  localStorage.setItem('agro_yield_hist',JSON.stringify(historico));
+  renderHistorico();
+}
+
+function limparHistorico() {
+  if(!confirm('Limpar todo o histórico?')) return;
+  historico=[];
+  localStorage.removeItem('agro_yield_hist');
+  renderHistorico();
+}
+
+function renderHistorico() {
+  const el=document.getElementById('historicoList');
+  if(!historico.length){ el.innerHTML='<div class="empty-state">Nenhum cálculo salvo ainda</div>'; return; }
+  el.innerHTML=historico.map(h=>`
+    <div class="hist-item">
+      <div class="hist-left">
+        <div class="h-cultura">${h.cultura}</div>
+        <div class="h-params">${h.data} · ${h.area} ha · ${h.scHa} ${h.unit}/ha · ${h.comp2} gr/v${h.amostras!=='—'?' · '+h.amostras+' am.':''}</div>
+      </div>
+      <div class="hist-right">
+        <div class="h-prod">${Number(h.prod).toLocaleString('pt-BR')}</div>
+        <div class="h-unit">${h.unit==='sc'?'sacas':'arrobas'}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── CALCULADORA DE PERDAS — ÁREA LIVRE ──
+let pontosPerdas = []; // [{comp, larg, graos}]
+
+function adicionarPonto() {
+  const n = pontosPerdas.length + 1;
+  pontosPerdas.push({ comp: '', larg: '', graos: '' });
+  renderPontos();
+}
+
+function removerPonto(i) {
+  pontosPerdas.splice(i, 1);
+  renderPontos();
+  calcularPerdas();
+}
+
+function atualizarPonto(i, campo, val) {
+  pontosPerdas[i][campo] = val;
+  calcularPerdas();
+}
+
+function renderPontos() {
+  const el = document.getElementById('pontosLista');
+  if (!pontosPerdas.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:12px 0">Nenhum ponto adicionado — clique em + Ponto</div>';
+    return;
+  }
+  el.innerHTML = pontosPerdas.map((p, i) => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--accent2);font-family:var(--font-ui)">📍 Ponto ${i+1}</span>
+        <button onclick="removerPonto(${i})" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:2px 6px;border-radius:4px">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div>
+          <div style="font-size:9px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Comp. (m)</div>
+          <input type="number" value="${p.comp}" placeholder="2.0" min="0" step="0.1" inputmode="decimal"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--accent2);font-size:18px;text-align:center;padding:6px 4px;border-radius:7px;font-weight:700;font-family:var(--font-ui);outline:none"
+            oninput="atualizarPonto(${i},'comp',this.value)">
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Larg. (m)</div>
+          <input type="number" value="${p.larg}" placeholder="0.5" min="0" step="0.1" inputmode="decimal"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--accent2);font-size:18px;text-align:center;padding:6px 4px;border-radius:7px;font-weight:700;font-family:var(--font-ui);outline:none"
+            oninput="atualizarPonto(${i},'larg',this.value)">
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Grãos</div>
+          <input type="number" value="${p.graos}" placeholder="18" min="0" inputmode="numeric"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;font-size:18px;text-align:center;padding:6px 4px;border-radius:7px;font-weight:700;font-family:var(--font-ui);outline:none"
+            oninput="atualizarPonto(${i},'graos',this.value)">
+        </div>
+      </div>
+      <div style="text-align:right;font-size:9px;color:var(--muted);margin-top:4px">
+        Área: ${(parseFloat(p.comp)||0) * (parseFloat(p.larg)||0) > 0 ? ((parseFloat(p.comp)||0)*(parseFloat(p.larg)||0)).toFixed(2)+' m²' : '—'}
+      </div>
+    </div>
+  `).join('');
+}
+
+function calcularPerdas() {
+  const cultura   = document.getElementById('perdaCultura').value;
+  const area      = parseFloat(document.getElementById('perdaArea').value) || 0;
+  const prodEsp   = parseFloat(document.getElementById('perdaProdEsperada').value) || 60;
+  const pmgDefault= cultura === 'milho' ? 350 : 150;
+  const pmgEl     = document.getElementById('perdaPMG');
+  if (!pmgEl.dataset.manual) pmgEl.value = pmgDefault;
+  const pmg       = parseFloat(pmgEl.value) || pmgDefault;
+
+  document.getElementById('perdaPMGHint').textContent = `Soja: ~150 g · Milho: ~350 g`;
+
+  // Agregar pontos
+  let totalArea = 0, totalGraos = 0, pontosValidos = 0;
+  for (const p of pontosPerdas) {
+    const c = parseFloat(p.comp) || 0;
+    const l = parseFloat(p.larg) || 0;
+    const g = parseFloat(p.graos) || 0;
+    const a = c * l;
+    if (a > 0) { totalArea += a; totalGraos += g; pontosValidos++; }
+  }
+
+  // Pré-colheita
+  const preComp = parseFloat(document.getElementById('preComp').value) || 0;
+  const preLarg = parseFloat(document.getElementById('preLarg').value) || 0;
+  const preGraos= parseFloat(document.getElementById('perdaPreColheita').value) || 0;
+  const preArea = preComp * preLarg;
+  document.getElementById('preAreaHint').textContent = preArea > 0 ? `Área pré: ${preArea.toFixed(2)} m²` : 'Área pré: —';
+
+  // grãos/m² médio dos pontos
+  const graosM2Total = totalArea > 0 ? totalGraos / totalArea : 0;
+  const graosM2Pre   = preArea  > 0 ? preGraos  / preArea   : 0;
+  const graosM2Maq   = Math.max(0, graosM2Total - graosM2Pre);
+
+  // Resumo dos pontos
+  document.getElementById('totalPontosVal').textContent    = pontosValidos;
+  document.getElementById('totalAreaPontosVal').textContent= totalArea.toFixed(2).replace('.',',');
+  document.getElementById('totalGraosPontosVal').textContent = totalGraos;
+  document.getElementById('graosM2Val').textContent = totalArea > 0 ? graosM2Total.toFixed(1) : '—';
+
+  // kg/ha = grãos/m² × (PMG/1000) × 10000
+  const kgHaTotal = graosM2Total * (pmg / 1000) * 10000;
+  const kgHaMaq   = graosM2Maq  * (pmg / 1000) * 10000;
+  const sacaKg    = 60;
+  const scHaTotal = kgHaTotal / sacaKg;
+  const scHaMaq   = kgHaMaq   / sacaKg;
+  const percPerda = prodEsp > 0 ? (scHaTotal / prodEsp) * 100 : 0;
+  const sacasTotal= scHaTotal * area;
+
+  if (totalArea === 0) {
+    ['perdaScHa','perdaScHaMaquina','perdaKgHa','perdaPerc','perdaSacasTotal'].forEach(id => {
+      document.getElementById(id).textContent = '—';
+    });
+    document.getElementById('perdaSemaforo').style.borderColor = 'var(--border)';
+    document.getElementById('perdaStatus').textContent = '—';
+    document.getElementById('perdaStatusText').textContent = 'Adicione pelo menos 1 ponto de coleta com área > 0';
+    renderDicas(cultura);
+    return;
+  }
+
+  document.getElementById('perdaScHa').textContent         = scHaTotal.toFixed(2);
+  document.getElementById('perdaScHaMaquina').textContent  = scHaMaq.toFixed(2);
+  document.getElementById('perdaKgHa').textContent         = fmt(kgHaTotal, 1);
+  document.getElementById('perdaPerc').textContent         = percPerda.toFixed(1) + '%';
+  document.getElementById('perdaSacasTotal').textContent   = fmt(sacasTotal, 0);
+
+  // Semáforo
+  const limOtimo     = cultura === 'milho' ? 3 : 1;
+  const limAceitavel = cultura === 'milho' ? 6 : 2;
+  let emoji, statusText, borderColor;
+  if (scHaMaq <= limOtimo) {
+    emoji = '✅'; statusText = `Ótimo! Perda da colhedora abaixo de ${limOtimo} sc/ha — regulagem excelente.`; borderColor = 'var(--accent3)';
+  } else if (scHaMaq <= limAceitavel) {
+    emoji = '⚠️'; statusText = `Aceitável, mas verifique a regulagem. Limite técnico: ${limAceitavel} sc/ha.`; borderColor = 'var(--warn)';
+  } else {
+    emoji = '🔴'; statusText = `Crítico! Perda acima de ${limAceitavel} sc/ha — requer regulagem imediata.`; borderColor = 'var(--danger)';
+  }
+  document.getElementById('perdaSemaforo').style.borderColor = borderColor;
+  document.getElementById('perdaStatus').textContent    = emoji + '  ' + scHaMaq.toFixed(2) + ' sc/ha (colhedora)';
+  document.getElementById('perdaStatusText').textContent = statusText;
+
+  renderDicas(cultura);
+}
+
+function renderDicas(cultura) {
+  const dicas = cultura === 'milho' ? [
+    { icon: '⚙️', titulo: 'Velocidade de avanço',  texto: 'Ideal: 5–6 km/h. Acima disso a trilha piora e a perda na plataforma aumenta.' },
+    { icon: '🌀', titulo: 'Rotação do cilindro',    texto: 'Milho: 400–600 rpm. Muito baixo = grão não trilhado. Muito alto = grão quebrado.' },
+    { icon: '📏', titulo: 'Abertura do côncavo',    texto: 'Milho: 25–35 mm. Abertura excessiva aumenta perdas na peneira.' },
+    { icon: '💨', titulo: 'Ventilador',              texto: 'Aumente a ventilação para expulsar palha sem carregar grão. Observe a saída da colhedora.' },
+    { icon: '🪟', titulo: 'Peneiras',               texto: 'Superior: 18–22 mm. Inferior: 8–12 mm. Ajuste conforme o tamanho do grão.' },
+  ] : [
+    { icon: '⚙️', titulo: 'Velocidade de avanço',  texto: 'Soja: 5–7 km/h. Velocidade alta é a principal causa de perdas pela plataforma.' },
+    { icon: '🌀', titulo: 'Rotação do cilindro',    texto: 'Soja: 600–800 rpm. Reduza em soja seca para evitar quebra.' },
+    { icon: '📏', titulo: 'Abertura do côncavo',    texto: 'Soja: 15–25 mm. Feche mais para soja seca; abra para grão úmido.' },
+    { icon: '🌿', titulo: 'Altura da plataforma',   texto: 'Mantenha o mais baixa possível — vagens baixas causam grande perda.' },
+    { icon: '💨', titulo: 'Ventilador',              texto: 'Ajuste para não soprar grão pela saída. Peneiras bem calibradas reduzem perda.' },
+  ];
+  document.getElementById('dicasRegulagemList').innerHTML = dicas.map(d => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+      <div style="font-size:11px;color:var(--accent2);font-family:var(--font-ui);font-weight:700;margin-bottom:3px">${d.icon} ${d.titulo}</div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.6">${d.texto}</div>
+    </div>
+  `).join('');
+}
+
+// ── INIT ──
+window.onload = () => {
+  carregarAmostra();
+  atualizarTabelaResumo();
+  recalcularResumoGlobal();
+  renderHistorico();
+  setCultura('soja', document.querySelector('.cultura-btn[data-cultura="soja"]'));
+  // Inicia com 3 pontos prontos para preencher
+  pontosPerdas = [{comp:'',larg:'',graos:''},{comp:'',larg:'',graos:''},{comp:'',larg:'',graos:''}];
+  renderPontos();
+  calcularPerdas();
+};
+</script>
+</body>
+</html>
